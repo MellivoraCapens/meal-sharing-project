@@ -1,0 +1,28 @@
+import nodemailer from "nodemailer";
+import { logger } from "../helpers/logger";
+import SMTPTransport from "nodemailer/lib/smtp-transport";
+
+const sendEmail = async (options: EmailOptions) => {
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    auth: {
+      user: process.env.SMTP_EMAIL,
+      pass: process.env.SMTP_PASSWORD,
+    },
+  } as SMTPTransport.Options);
+
+  const message = {
+    from: `${process.env.FROM_NAME} <${process.env.FROM_EMAIL}>`,
+    to: options.email,
+    subject: options.subject,
+    text: options.message,
+    html: `<p>${options.message}</p>`,
+  };
+
+  const info = await transporter.sendMail(message);
+
+  logger.INFO(`Message sent for reset password. Info: ${info.messageId}`);
+};
+
+export default sendEmail;
