@@ -6,6 +6,21 @@ import { sendTokenResponse } from "../helpers/sendTokenResponse";
 import sendEmail from "../utils/sendEmail";
 import crypto from "crypto";
 
+// @desc    get current logged in user
+// @route   GET /api/v1/auth/me
+// @access  private
+export const getMe = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    console.log(req.user);
+    const user = await User.findById(req.user.id);
+
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  }
+);
+
 // @desc    update password
 // @route   PUT /api/v1/auth/updatepassword
 // @access  private
@@ -65,6 +80,41 @@ export const login = asyncHandler(
 
     if (!user) {
       return next(new ErrorResponse("Invalid credentials", 401));
+    }
+
+    const isMatch = await user.matchPassword(password);
+
+    if (!isMatch) {
+      return next(new ErrorResponse("Invalid credentials", 401));
+    }
+
+    sendTokenResponse(user, 200, res);
+  }
+);
+
+// @desc    login admin
+// @route   POST /api/v1/auth/admin
+// @access  public
+export const loginAdmin = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return next(
+        new ErrorResponse("Please provide an email and a password", 400)
+      );
+    }
+
+    const user = await User.findOne({ email }).select("+password");
+
+    if (!user) {
+      return next(new ErrorResponse("Invalid credentials", 401));
+    }
+
+    if (user.role !== "admin") {
+      return next(
+        new ErrorResponse("Not authorized to access this route", 401)
+      );
     }
 
     const isMatch = await user.matchPassword(password);
